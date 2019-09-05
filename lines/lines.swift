@@ -12,8 +12,8 @@ import SpriteKit
 class Lines {
     
     public var w : CGFloat = 0
-    public let mapWidth = 10
-    public let mapHeight = 10
+    public let mapWidth = 9
+    public let mapHeight = 9
     public var score : Int = 0
     
     private let MIN_LINE_SIZE = 5
@@ -24,6 +24,8 @@ class Lines {
     private var selectedElement : SKShapeNode?
     
     private var canSelect = true
+
+    private var nextColors = [SKShapeNode?]()
     
     init(gameScene: GameScene) {
         self.scene = gameScene
@@ -31,6 +33,17 @@ class Lines {
         
         for _ in 0..<(mapWidth * mapHeight) {
             elements.append(nil)
+        }
+
+        for i in 0 ..< 3 {
+            nextColors.append(SKShapeNode.init(rectOf: CGSize.init(width: w - 5, height: w - 5), cornerRadius: self.w * 0.3))
+            let x: CGFloat = CGFloat( 0 - CGFloat(w * 3 / 2) + CGFloat(i) * w  + w / 2)
+            let y: CGFloat = CGFloat( self.scene!.size.height / 2 - w * CGFloat(mapHeight) - CGFloat(w * 2))
+            nextColors[i]?.position = CGPoint(x: x, y: y)
+            let color = getRandomColor()
+            nextColors[i]?.strokeColor = color
+            nextColors[i]?.fillColor = color
+            scene!.addChild(nextColors[i]!)
         }
         
         for _ in 0..<mapHeight {
@@ -40,17 +53,25 @@ class Lines {
             }
             map.append(row)
         }
-        
+
+        /*
         let n = SKShapeNode.init(rectOf: CGSize.init(width: w * CGFloat(mapWidth), height: w * CGFloat(mapWidth)), cornerRadius: w * 0.3)
         n.lineWidth = 0.5
         n.position = CGPoint(x: 0, y: scene!.size.height / 4 - w / 2 - 5)
         n.strokeColor = SKColor.darkGray
         scene!.addChild(n)
+        */
+
+        let blockSize : CGFloat = self.w
+        if let grid = Grid(blockSize: blockSize, rows: mapHeight, cols: mapWidth) {
+            grid.position = CGPoint (x: scene!.frame.midX, y: scene!.size.height / 4 - self.w / 2 - 2.5)
+            scene!.addChild(grid)
+        }
         
-        for _ in 1...3 {
-            let pos = addRandomBall()
+        for i in 0 ..< 3 {
+            let pos = addRandomBall(ind: i)
             if pos != nil {
-                score += self.checkAndRemove(res: pos!)
+                score += self.checkAndRemove(res: pos!, auto: true)
             }
         }
     }
@@ -188,8 +209,29 @@ class Lines {
         elements[y * mapWidth + x] = n;
         scene!.addChild(n)
     }
-    
-    func addRandomBall() -> (x: Int, y: Int)? {
+
+    func getRandomColor() -> SKColor {
+        let iColor = Int.random(in: 0 ... 5)
+
+        switch iColor {
+        case    0 :
+            return SKColor.blue
+        case    1 :
+            return SKColor.green
+        case    2 :
+            return SKColor.red
+        case    3 :
+            return SKColor.cyan
+        case    4 :
+            return SKColor.yellow
+        case    5 :
+            return SKColor.orange
+        default :
+            return SKColor.blue
+        }
+    }
+
+    func addRandomBall( ind: Int ) -> (x: Int, y: Int)? {
         var availablePlaces = [Int]()
         for i in 0..<(mapWidth * mapHeight) {
             if elements[i] === nil {
@@ -206,35 +248,13 @@ class Lines {
         let y : Int = availablePlaces[index] / mapWidth
         let x : Int = availablePlaces[index] % mapWidth
         
-        let iColor = Int.random(in: 0 ... 5)
-        
-        switch iColor {
-        case    0 :
-            self.addItemToMap(x: x, y: y, color: SKColor.blue)
-            break
-        case    1 :
-            self.addItemToMap(x: x, y: y, color: SKColor.green)
-            break
-        case    2 :
-            self.addItemToMap(x: x, y: y, color: SKColor.red)
-            break
-        case    3 :
-            self.addItemToMap(x: x, y: y, color: SKColor.cyan)
-            break
-        case    4 :
-            self.addItemToMap(x: x, y: y, color: SKColor.yellow)
-            break
-        case    5 :
-            self.addItemToMap(x: x, y: y, color: SKColor.orange)
-            break
-        default :
-            self.addItemToMap(x: x, y: y, color: SKColor.blue)
-        }
-        
+        self.addItemToMap(x: x, y: y, color: nextColors[ind]!.fillColor)
+        nextColors[ind]!.fillColor = getRandomColor()
+
         return (x: x, y: y)
     }
     
-    func checkAndRemove(res: (x: Int, y: Int)) -> Int {
+    func checkAndRemove(res: (x: Int, y: Int), auto : Bool = false) -> Int {
         var line = self.checkLine(p: res, d: (0, -1))
         if line.count > 0 {
             for i in 0..<line.count {
@@ -282,7 +302,8 @@ class Lines {
             }
             return line.count
         }
-        
+
+        if auto { return 0 }
         return 1
     }
     
@@ -359,7 +380,7 @@ class Lines {
                     self.canSelect = false
                     var seq = [SKAction]()
                     for i in 0..<path.count {
-                        seq.append(SKAction.move(to: toSceneCoord(x: path[i].x, y: path[i].y), duration: 0.2))
+                        seq.append(SKAction.move(to: toSceneCoord(x: path[i].x, y: path[i].y), duration: 0.1))
                     }
                     let moving : SKAction = SKAction.sequence(seq)
                     self.selectedElement!.run(moving, completion: {
@@ -374,10 +395,10 @@ class Lines {
                         
                         let turnScore = self.checkAndRemove(res: res)
                         if turnScore == 1 {
-                            for _ in 1...3 {
-                                let pos = self.addRandomBall()
+                            for i in 0 ..< 3 {
+                                let pos = self.addRandomBall(ind: i)
                                 if pos != nil {
-                                    self.score += self.checkAndRemove(res: pos!)
+                                    self.score += self.checkAndRemove(res: pos!, auto: true)
                                 }
                                 
                             }

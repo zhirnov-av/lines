@@ -51,7 +51,12 @@ class GameScene: SKScene {
                                               SKAction.fadeOut(withDuration: 0.5),
                                               SKAction.removeFromParent()]))
         }
-        
+
+        initScene()
+
+
+
+
         scoreLabel = SKLabelNode()
         scoreLabel!.alpha = 1.0
         scoreLabel!.fontSize = 40
@@ -61,8 +66,7 @@ class GameScene: SKScene {
 
         self.addChild(self.scoreLabel!)
         
-        initScene()
-        
+
         print("didMove\n")
     }
 
